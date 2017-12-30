@@ -1,5 +1,6 @@
 const record = require('node-record-lpcm16');
 const speech = require('@google-cloud/speech');
+const iconv = require('iconv-lite');
 
 const snowboy = require('snowboy');
 const Detector = snowboy.Detector;
@@ -92,7 +93,9 @@ function startStream()
         .on("error", console.error)
         .on("data", (data: any) =>
         {
-            console.log(JSON.stringify(data));
+            let q = data.results[0].alternatives[0].transcript;
+            console.log("say:", q);
+            mqttClient.publish('commandprocessor/process', q);
         });
 }
 
