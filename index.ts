@@ -1,8 +1,17 @@
 const record = require('node-record-lpcm16');
+const speech = require('@google-cloud/speech');
 
 const snowboy = require('snowboy');
 const Detector = snowboy.Detector;
 const Models = snowboy.Models;
+
+const mqtt = require('mqtt')
+const mqttClient = mqtt.connect('mqtt://10.10.0.137');
+
+const speechClient = new speech.SpeechClient(
+    {
+        projectId: 'speech-186514'
+    });
 
 const models = new Models();
 
@@ -18,10 +27,11 @@ var timer: any = null;
 var silenceTimer: any = null;
 var silenceActive: boolean = false;
 var state: State = State.WAITING;
+var stream: any = null;
 
 models.add({
     file: 'node_modules/snowboy/resources/snowboy.umdl',
-    sensitivity: '0.7',
+    sensitivity: '0.8',
     hotwords: 'snowboy'
 });
 
@@ -51,11 +61,39 @@ function getPreBuffer()
 function send(buf: Buffer)
 {
     console.log("sending ", buf.length, " bytes");
+    if (stream != null)
+    {
+        stream.write(buf);
+    }
 }
 
 function finishSend()
 {
     console.log("closing Stream");
+    if (stream != null)
+    {
+        stream.end();
+        stream = null;
+    }
+}
+
+function startStream()
+{
+    stream = speechClient
+        .streamingRecognize({
+            config: {
+                encoding: "LINEAR16",
+                sampleRateHertz: 16000,
+                languageCode: "de-DE",
+                maxAlternatives: 1,
+            },
+            interimResults: false
+        })
+        .on("error", console.error)
+        .on("data", (data: any) =>
+        {
+            console.log(JSON.stringify(data));
+        });
 }
 
 detector.on('silence', function ()
@@ -113,7 +151,8 @@ detector.on('hotword', function (index: number, hotword: string, buffer: Buffer)
     console.log('hotword', index, hotword);
     state = State.SENDING;
     console.log("START");
-    send(getPreBuffer());
+    startStream();
+    // send(getPreBuffer());
     clearPreBuffer();
     send(buffer);
     silenceActive = false;

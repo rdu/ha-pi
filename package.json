@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "@google-cloud/speech": "^1.0.0",
+    "mqtt": "^2.15.0",
     "nan": "^2.8.0",
     "node-record-lpcm16": "^0.3.0",
     "snowboy": "^1.2.0"
